@@ -13,6 +13,7 @@ export interface LlamaCppMessage {
 }
 
 export interface LlamaCppChatRequest {
+    model: string;
     messages: LlamaCppMessage[];
     stream: boolean;
     tools?: Array<{
@@ -23,6 +24,8 @@ export interface LlamaCppChatRequest {
             parameters?: object;
         };
     }>;
+    n_ctx?: number;
+    n_predict?: number;
 }
 
 export interface LlamaCppStreamChunk {

@@ -2,24 +2,68 @@ import * as vscode from 'vscode';
 import { LlamaCppMessage, LlamaCppChatRequest, LlamaCppStreamChunk } from './defs';
 
 export class LlamaCppChatProvider implements vscode.LanguageModelChatProvider {
-    private readonly serverUrl = 'http://localhost:8011';
+    private port: number = 8080;
+    private readonly defaultServerUrl = `http://localhost:${this.port}`;
+    private readonly modelUrlMap = new Map<string, string>();
     
     async provideLanguageModelChatInformation(
         options: { silent: boolean },
         token: vscode.CancellationToken
     ): Promise<vscode.LanguageModelChatInformation[]> {
-        return [{
-            id: 'current-model',
-            name: 'Current model',
-            family: 'llama',
-            version: '1.0.0',
-            maxInputTokens: 131072,
-            maxOutputTokens: 16384,
-            capabilities: {
-                toolCalling: true,
-                imageInput: false
+        // Load model definitions from the global configuration `llmcppprov.models`
+        const config = vscode.workspace.getConfiguration('llmcppprov');
+        const modelsConfig = config.get<Record<string, any>>('models', {});
+
+        // If no model definitions were provided, fall back to the original single model.
+        if (!modelsConfig || Object.keys(modelsConfig).length === 0) {
+            return [{
+                id: 'current-model',
+                name: 'Current Llama.CPP Model',
+                family: 'llama',
+                version: '1.0.0',
+                maxInputTokens: 131072,
+                maxOutputTokens: 16384,
+                capabilities: {
+                    toolCalling: true,
+                    imageInput: false
+                }
+            }];
+        }
+
+        // Map the configuration entries into LanguageModelChatInformation objects.
+        const chatInfoList: vscode.LanguageModelChatInformation[] = [];
+        this.modelUrlMap.clear();
+        for (const [name, def] of Object.entries(modelsConfig)) {
+            if (typeof def.url !== 'string' || !/^https?:\/\//i.test(def.url)) {
+                continue;
             }
-        }];
+            const id = typeof def.id === 'string' ? def.id : name;
+            const family = typeof def.family === 'string' ? def.family : 'llama';
+            const version = typeof def.version === 'string' ? def.version : '1.0.0';
+            const maxInputTokens = typeof def.maxInputTokens === 'number' ? def.maxInputTokens : 32768;
+            const maxOutputTokens = typeof def.maxOutputTokens === 'number' ? def.maxOutputTokens : 8192;
+            const capabilitiesObj = typeof def.capabilities === 'object' && def.capabilities !== null
+                ? { ...def.capabilities, imageInput: false }
+                : { imageInput: false };
+
+            chatInfoList.push({
+                id,
+                name: `${name} (Llama.CPP)`,
+                family,
+                version,
+                maxInputTokens,
+                maxOutputTokens,
+                capabilities: capabilitiesObj as any
+            });
+            
+            // Clean the URL: strip any trailing slashes, then strip a trailing '/v1' if present
+            const cleanedUrl = def.url
+                .replace(/\/+$/, '')          // remove trailing '/'
+                .replace(/\/v1\/?$/, '');     // remove trailing '/v1'
+            this.modelUrlMap.set(id, cleanedUrl);
+        }
+
+        return chatInfoList;
     }
     
     async provideLanguageModelChatResponse(
@@ -32,9 +76,18 @@ export class LlamaCppChatProvider implements vscode.LanguageModelChatProvider {
         const llamaMessages = this.convertMessages(messages);
         
         const requestBody: LlamaCppChatRequest = {
+            model: model.id,
             messages: llamaMessages,
             stream: true
         };
+
+        // Conditionally add context and predict limits if available on the model.
+        if ('maxInputTokens' in model) {
+            (requestBody as any).n_ctx = (model as any).maxInputTokens;
+        }
+        if ('maxOutputTokens' in model) {
+            (requestBody as any).n_predict = (model as any).maxOutputTokens;
+        }
 
         if (options.tools && options.tools.length > 0) {
             requestBody.tools = options.tools.map(tool => ({
@@ -53,7 +106,8 @@ export class LlamaCppChatProvider implements vscode.LanguageModelChatProvider {
         });
 
         try {
-            const response = await fetch(`${this.serverUrl}/v1/chat/completions`, {
+            const baseUrl = this.modelUrlMap.get(model.id) ?? this.defaultServerUrl;
+            const response = await fetch(`${baseUrl}/v1/chat/completions`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -189,11 +243,17 @@ export class LlamaCppChatProvider implements vscode.LanguageModelChatProvider {
     }
 
     private mapRole(role: vscode.LanguageModelChatMessageRole): 'system' | 'user' | 'assistant' | 'tool' {
-        switch (role) {
-            case vscode.LanguageModelChatMessageRole.User:
+        // Conversion because of missing roles in vscode.LanguageModelChatMessageRole, but actually sent by VSCode (eg. 'system').
+        const id = role as number;
+        switch (id) {
+            case 1:
                 return 'user';
-            case vscode.LanguageModelChatMessageRole.Assistant:
+            case 2:
                 return 'assistant';
+            case 3:
+                return 'system';
+            case 4:
+                return 'tool';
             default:
                 return 'user';
         }

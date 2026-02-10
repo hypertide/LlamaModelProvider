@@ -2,16 +2,19 @@
   "name": "llamamodelprovider",
   "displayName": "LlamaModelProvider",
   "description": "Llama.CPP Model Provider",
-  "version": "0.0.1",
-  "publisher": "Starnode",
+  "version": "0.0.2",
+  "publisher": "Hypertide",
+  "repository": {
+    "url": "https://www.github.com/hypertide/LlamaModelProvider"
+  },
   "author": {
-    "name": "Vox"
+    "name": "Hypertide"
   },
   "engines": {
     "vscode": "^1.109.0"
   },
   "categories": [
-    "Other"
+    "Machine Learning"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -24,6 +27,44 @@
         "displayName": "Llama.CPP Model Provider"
       }
     ]
+      ,
+      "configuration": [
+        {
+          "type": "object",
+          "title": "Llama CPP Model Provider Settings",
+          "properties": {
+            "llmcppprov.models": {
+              "type": "object",
+              "description": "Models definitions.",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" },
+                    "url": { "type": "string" },
+                    "family": { "type": "string" },
+                    "version": { "type": "string" },
+                    "maxInputTokens": { "type": "integer" },
+                    "maxOutputTokens": { "type": "integer" },
+                    "capabilities": {
+                      "type": "object",
+                      "properties": {
+                        "toolCalling": { "type": "boolean" }
+                      },
+                      "required": ["toolCalling"]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "url",
+                    "maxInputTokens",
+                    "maxOutputTokens",
+                    "capabilities"
+                  ]
+                }
+            }
+          }
+        }
+      ]
   },
   "scripts": {
     "vscode:prepublish": "npm run package",

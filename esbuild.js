@@ -41,6 +41,9 @@ async function main() {
 			/* add to the end of plugins array */
 			esbuildProblemMatcherPlugin,
 		],
+		external: [
+			'vscode'
+		],
 	});
 	if (watch) {
 		await ctx.watch();

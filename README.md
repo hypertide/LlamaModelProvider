@@ -1,71 +1,64 @@
-# llamamodelprovider README
+# LlamaModelProvider
 
-This is the README for your extension "llamamodelprovider". After writing up a brief description, we recommend including the following sections.
+**LlamaModelProvider** is a Visual Studio Code extension that supplies a **`LanguageModelChatProvider`** backed by a local [Llama.CPP](https://github.com/abetlen/llama.cpp) server.
+
+The extension exposes each configured model as a chat provider through the VS Code Language Model API, allowing you to use the model in the built‑in Chat view or programmatically via extensions that consume chat providers.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+* **Dynamic model registration** – Load one or more Llama.CPP models from workspace settings and expose them as chat providers.
+* **Streaming chat** – The implementation streams tokens from the server using Server‑Sent Events (SSE), giving a real‑time response experience.
+* **Tool calling support** – When the model generates a tool call, it is converted to a `vscode.LanguageModelToolCallPart`, enabling integration with other extensions that provide tools.
+* **Lightweight** – No heavy dependencies; the extension only bundles the TypeScript source and communicates over HTTP.
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+* **Visual Studio Code** ≥ 1.109.0 (latest stable recommended).
+* A **running Llama.CPP server** exposing the OpenAI‑compatible `/v1/chat/completions` endpoint. Typical URL: `http://localhost:8080`.
+	* The extension will fall back to the default URL (`http://localhost:8080`) if no model URLs are configured.
+* Optionally, a `models` configuration in `settings.json` (see *Extension Settings* below) to specify multiple models.
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+The extension contributes one complex setting that allows you to declare multiple models:
 
-For example:
+```json
+{
+	"llmcppprov.models": {
+		"Model Display Name": {
+			"id": "example-model-name-Q8_0.gguf",
+			"url": "http://localhost:8080",
+			"family": "llama",
+			"version": "1.0.0",
+			"maxInputTokens": 131072,
+			"maxOutputTokens": 16384,
+			"capabilities": { "toolCalling": true }
+		}
+	}
+}
+```
 
-This extension contributes the following settings:
+* `id` – Identifier used by VS Code to reference and display the model.
+* `url` – Base URL of the Llama.CPP server (port included) - tailing / or /v1 will be striped.
+* `family` – Optional; defaults to `llama`.
+* `version` – Optional; displayed in the provider list.
+* `maxInputTokens` / `maxOutputTokens` – Optional limits forwarded to the server via `n_ctx` and `n_predict`.
+* `capabilities.toolCalling` – Must be `true` if you want to use tool calls; image input is not supported.
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+If no configuration is provided, a default single‑model provider named *Current Llama.CPP Model* is exposed pointing at `http://localhost:8080`.
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+* **SSE parse errors** – Occasionally malformed chunks from the server may be silently ignored; the extension logs these to the console.
+* **No image input** – The provider explicitly sets `imageInput: false` in its capabilities.
+* **Tool call ordering** – When multiple tool calls are emitted in rapid succession, the provider buffers them until a `finish_reason: "tool_calls"` arrives.
+
+These issues are considered low‑impact for typical development usage.
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+### 0.0.1
+Initial release of the **LlamaModelProvider** extension providing a stream‑based chat provider for Llama.CPP.
 
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+### 0.0.2
+Added support for multiple model configuration via `llmcppprov.models` and basic tool‑calling integration.
