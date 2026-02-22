@@ -2,7 +2,7 @@
   "name": "llamamodelprovider",
   "displayName": "LlamaModelProvider",
   "description": "Llama.CPP Model Provider",
-  "version": "0.0.2",
+  "version": "0.9.0",
   "publisher": "Hypertide",
   "repository": {
     "url": "https://www.github.com/hypertide/LlamaModelProvider"
@@ -17,7 +17,7 @@
     "Machine Learning"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "*"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -26,45 +26,60 @@
         "vendor": "llamacpp-model-provider",
         "displayName": "Llama.CPP Model Provider"
       }
-    ]
-      ,
-      "configuration": [
-        {
-          "type": "object",
-          "title": "Llama CPP Model Provider Settings",
-          "properties": {
-            "llmcppprov.models": {
+    ],
+    "configuration": [
+      {
+        "type": "object",
+        "title": "Llama CPP Model Provider Settings",
+        "properties": {
+          "llmcppprov.models": {
+            "type": "object",
+            "description": "Models definitions.",
+            "additionalProperties": {
               "type": "object",
-              "description": "Models definitions.",
-                "additionalProperties": {
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                },
+                "family": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "maxInputTokens": {
+                  "type": "integer"
+                },
+                "maxOutputTokens": {
+                  "type": "integer"
+                },
+                "capabilities": {
                   "type": "object",
                   "properties": {
-                    "id": { "type": "string" },
-                    "url": { "type": "string" },
-                    "family": { "type": "string" },
-                    "version": { "type": "string" },
-                    "maxInputTokens": { "type": "integer" },
-                    "maxOutputTokens": { "type": "integer" },
-                    "capabilities": {
-                      "type": "object",
-                      "properties": {
-                        "toolCalling": { "type": "boolean" }
-                      },
-                      "required": ["toolCalling"]
+                    "toolCalling": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
-                    "id",
-                    "url",
-                    "maxInputTokens",
-                    "maxOutputTokens",
-                    "capabilities"
+                    "toolCalling"
                   ]
                 }
+              },
+              "required": [
+                "id",
+                "url",
+                "maxInputTokens",
+                "maxOutputTokens",
+                "capabilities"
+              ]
             }
           }
         }
-      ]
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
@@ -81,15 +96,15 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.109.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
-    "typescript-eslint": "^8.54.0",
-    "eslint": "^9.39.2",
+    "@types/vscode": "1.109.x",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
     "esbuild": "^0.27.2",
+    "eslint": "^9.39.2",
     "npm-run-all": "^4.1.5",
     "typescript": "^5.9.3",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
+    "typescript-eslint": "^8.54.0"
   }
 }
